@@ -1,19 +1,30 @@
 <?php
-// Set the response type to plain text
 header('Content-Type: text/plain');
 
-// Configuration: Get 'delay' from query string, default to 2 seconds
-$delay = isset($_GET['delay']) ? (int)$_GET['delay'] : 2;
+$configFile = '/tmp/server_delay.txt';
+$defaultDelayMs = 100; // Default to 500ms
 
-// Validation: Limit the delay to prevent long-running hanging processes
-if ($delay > 10) {
-    echo "Error: Delay too long. Keep it under 10 seconds.";
+// --- Logic to UPDATE the delay (in milliseconds) ---
+if (isset($_GET['set_delay'])) {
+    $newDelayMs = (int)$_GET['set_delay'];
+    
+    // Safety check: allow 0ms to 30,000ms (30 seconds)
+    if ($newDelayMs < 0 || $newDelayMs > 30000) {
+        http_response_code(400);
+        echo "Error: Delay must be between 0 and 30000 ms.";
+        exit;
+    }
+
+    file_put_contents($configFile, $newDelayMs);
+    echo "Success: Delay updated to $newDelayMs ms.";
     exit;
 }
 
-// The "Work": Wait for the configurable amount of time
-sleep($delay);
+// --- Logic to EXECUTE the delay ---
+$currentDelayMs = file_exists($configFile) ? (int)file_get_contents($configFile) : $defaultDelayMs;
 
-// The Response
-echo "OK - Responded after $delay seconds.";
+// usleep takes microseconds, so we multiply ms by 1000
+usleep($currentDelayMs * 1000);
+
+echo "OK - Responded after $currentDelayMs ms.";
 ?>
